@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <script>
+        const workerCode = `
+    self.onmessage = (event) => {
+      const { userCode, tests } = event.data;
+      try {
+        const cleanCode = userCode.replace(/export\\s+/g, "");
+        eval(cleanCode);
+        const results = tests.map((test) => {
+          const actual = sum(...test.args);
+          return { args: test.args, expected: test.expected, actual, passed: actual === test.expected };
+        });
+        self.postMessage({ success: true, results });
+      } catch (error) {
+        self.postMessage({ success: false, error: error.message });
+      }
+    };
+  `;
+
+        window.addEventListener("message", (event) => {
+            const blob = new Blob([workerCode], { type: "application/javascript" });
+            const worker = new Worker(URL.createObjectURL(blob));
+
+            worker.onmessage = (workerEvent) => {
+                window.parent.postMessage(workerEvent.data, "*");
+            };
+
+            worker.postMessage(event.data);
+        });
+    </script>
+</body>
+
+</html>
