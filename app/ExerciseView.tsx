@@ -6,11 +6,13 @@ type ExerciseViewProps = {
     title: string;
     statement: string;
     starterCode: string;
+    hints: string[];
 };
 
-export default function ExerciseView({ title, statement, starterCode }: ExerciseViewProps) {
+export default function ExerciseView({ title, statement, starterCode, hints }: ExerciseViewProps) {
     const [code, setCode] = useState(starterCode);
     const [isClicked, setIsClicked] = useState(false);
+    const [hintsShown, setHintsShown] = useState(0);
 
     function handleClick() {
         setIsClicked(true);
@@ -34,13 +36,20 @@ export default function ExerciseView({ title, statement, starterCode }: Exercise
                     ></textarea>
                 </div>
 
-                <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-
-                    <button className="rounded-lg bg-black px-4 py-2 text-white transition-colors hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/80"
-                        onClick={handleClick}>valider</button>
-                    {isClicked && <p>Code vérifié !</p>}
+                <div className="flex flex-col gap-2">
+                    {hints.slice(0, hintsShown).map((hint, index) => (
+                        <p key={index}>{hint}</p>
+                    ))}
+                    {hintsShown < hints.length && (
+                        <button
+                            className="text-sm underline"
+                            onClick={() => setHintsShown(hintsShown + 1)}
+                        >
+                            Afficher un indice
+                        </button>
+                    )}
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 }
