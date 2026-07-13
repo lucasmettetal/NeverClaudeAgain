@@ -1,21 +1,45 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+
+type TestResult = {
+    args: number[];
+    expected: number;
+    actual: number;
+    passed: boolean;
+};
 
 type ExerciseViewProps = {
     title: string;
     statement: string;
     starterCode: string;
     hints: string[];
+    tests: { args: number[]; expected: number }[];
 };
 
-export default function ExerciseView({ title, statement, starterCode, hints }: ExerciseViewProps) {
+export default function ExerciseView({ title, statement, starterCode, hints, tests }: ExerciseViewProps) {
     const [code, setCode] = useState(starterCode);
-    const [isClicked, setIsClicked] = useState(false);
     const [hintsShown, setHintsShown] = useState(0);
+    const [results, setResults] = useState<TestResult[] | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    useEffect(() => {
+        function handleMessage(event: MessageEvent) {
+            if (event.data.success) {
+                setResults(event.data.results);
+                setError(null);
+            } else {
+                setError(event.data.error);
+                setResults(null);
+            }
+        }
+        window.addEventListener("message", handleMessage);
+        return () => window.removeEventListener("message", handleMessage);
+    }, []);
 
     function handleClick() {
-        setIsClicked(true);
+        iframeRef.current?.contentWindow?.postMessage({ userCode: code, tests }, "*");
     }
 
     return (
@@ -36,20 +60,39 @@ export default function ExerciseView({ title, statement, starterCode, hints }: E
                     ></textarea>
                 </div>
 
+                <div className="flex flex-col gap-2 w-full">
+                    <button
+                        className="rounded-lg bg-black px-4 py-2 text-white transition-colors hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/80 w-fit"
+                        onClick={handleClick}
+                    >
+                        Vérifier
+                    </button>
+
+                    {results && (
+                        <ul className="text-sm">
+                            {results.map((r, index) => (
+                                <li key={index} className={r.passed ? "text-green-600" : "text-red-600"}>
+                                    sum({r.args.join(", ")}) = {r.actual} {r.passed ? "✓" : `(attendu ${r.expected})`}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    {error && <p className="text-sm text-red-600">{error}</p>}
+                </div>
+
                 <div className="flex flex-col gap-2">
                     {hints.slice(0, hintsShown).map((hint, index) => (
-                        <p key={index}>{hint}</p>
+                        <p key={index} className="text-sm text-zinc-500">{hint}</p>
                     ))}
                     {hintsShown < hints.length && (
-                        <button
-                            className="text-sm underline"
-                            onClick={() => setHintsShown(hintsShown + 1)}
-                        >
+                        <button className="text-sm underline" onClick={() => setHintsShown(hintsShown + 1)}>
                             Afficher un indice
                         </button>
                     )}
                 </div>
-            </main >
-        </div >
+
+                <iframe ref={iframeRef} src="/sandbox.html" sandbox="allow-scripts" style={{ display: "none" }} />
+            </main>
+        </div>
     );
 }

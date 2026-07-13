@@ -2,12 +2,13 @@
 <html>
 
 <body>
-    <script>
-        const workerCode = `
+  <script>
+    const workerCode = `
     self.onmessage = (event) => {
       const { userCode, tests } = event.data;
       try {
-        const cleanCode = userCode.replace(/export\\s+/g, "");
+        const cleanCode = userCode.replace(/export\\s+/g, "").replace(/:\\s*[A-Za-z_][\\w<>\\[\\]]*/g, "");
+
         eval(cleanCode);
         const results = tests.map((test) => {
           const actual = sum(...test.args);
@@ -20,17 +21,23 @@
     };
   `;
 
-        window.addEventListener("message", (event) => {
-            const blob = new Blob([workerCode], { type: "application/javascript" });
-            const worker = new Worker(URL.createObjectURL(blob));
+    window.addEventListener("message", (event) => {
+      const blob = new Blob([workerCode], { type: "application/javascript" });
+      const worker = new Worker(URL.createObjectURL(blob));
 
-            worker.onmessage = (workerEvent) => {
-                window.parent.postMessage(workerEvent.data, "*");
-            };
+      const timeout = setTimeout(() => {
+        worker.terminate();
+        window.parent.postMessage({ success: false, error: "Timeout : le code met trop de temps a s'executer" }, "*");
+      }, 3000);
 
-            worker.postMessage(event.data);
-        });
-    </script>
+      worker.onmessage = (workerEvent) => {
+        clearTimeout(timeout);
+        window.parent.postMessage(workerEvent.data, "*");
+      };
+
+      worker.postMessage(event.data);
+    });
+  </script>
 </body>
 
 </html>

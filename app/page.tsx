@@ -12,6 +12,7 @@ export default function ExercisePage() {
       statement={exercise.statement}
       starterCode={exercise.starterCode}
       hints={exercise.hints}
+      tests={exercise.tests}
     />
 
   );
